@@ -3,12 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Codicon } from '../../../../base/common/codicons.js';
+import { ThemeIcon } from '../../../../base/common/themables.js';
 import { URI } from '../../../../base/common/uri.js';
 import { localize } from '../../../../nls.js';
+import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { EditorInputCapabilities, IUntypedEditorInput } from '../../../common/editor.js';
 import { EditorInput } from '../../../common/editor/editorInput.js';
-import { ProcessExplorerEditorInput } from '../../processExplorer/browser/processExplorerEditorInput.js';
-import { ISSUE_REPORTER_INPUT_ID } from './issueReporterEditor.js';
+import { IssueReporterData } from './issueReporterModel.js';
+
+const issueReporterEditorIcon = registerIcon('issue-reporter-editor-label-icon', Codicon.report, localize('issueReporterEditorLabelIcon', 'Icon of the issue reporter editor label.'));
+
+export const ISSUE_REPORTER_INPUT_ID = 'workbench.input.issueReporter';
 
 export class IssueReporterEditorInput extends EditorInput {
 	static readonly ID: string = ISSUE_REPORTER_INPUT_ID;
@@ -27,22 +33,34 @@ export class IssueReporterEditorInput extends EditorInput {
 		return IssueReporterEditorInput._instance;
 	}
 
+	private _data: IssueReporterData | undefined;
+
+	get data(): IssueReporterData | undefined {
+		return this._data;
+	}
+
+	set data(value: IssueReporterData | undefined) {
+		this._data = value;
+	}
+
 	override get typeId(): string { return IssueReporterEditorInput.ID; }
+	override get editorId(): string | undefined { return IssueReporterEditorInput.ID; }
 	override get resource(): URI | undefined { return IssueReporterEditorInput.RESOURCE; }
-	override get capabilities() { return EditorInputCapabilities.Singleton; }
+	override get capabilities() { return EditorInputCapabilities.Readonly | EditorInputCapabilities.Singleton; }
 
 	override getName(): string {
 		return localize('issueReporterInputName', "Issue Reporter");
 	}
 
-	// TODO
-	// override getIcon(): ThemeIcon {	}
+	override getIcon(): ThemeIcon {
+		return issueReporterEditorIcon;
+	}
 
 	override matches(other: EditorInput | IUntypedEditorInput): boolean {
 		if (super.matches(other)) {
 			return true;
 		}
 
-		return other instanceof ProcessExplorerEditorInput;
+		return other instanceof IssueReporterEditorInput;
 	}
 }

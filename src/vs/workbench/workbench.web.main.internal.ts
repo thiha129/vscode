@@ -172,6 +172,9 @@ import './contrib/remote/browser/remoteStartEntry.contribution.js';
 // Process Explorer
 import './contrib/processExplorer/browser/processExplorer.web.contribution.js';
 
+// Issue Reporter
+import './contrib/issueReporter/browser/issueReporter.contribution.js';
+
 //#endregion
 
 

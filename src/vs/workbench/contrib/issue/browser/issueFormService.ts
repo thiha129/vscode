@@ -15,14 +15,14 @@ import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { ExtensionIdentifier, ExtensionIdentifierSet } from '../../../../platform/extensions/common/extensions.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
-import product from '../../../../platform/product/common/product.js';
 import { IRectangle } from '../../../../platform/window/common/window.js';
 import { AuxiliaryWindowMode, IAuxiliaryWindowService } from '../../../services/auxiliaryWindow/browser/auxiliaryWindowService.js';
 import { IHostService } from '../../../services/host/browser/host.js';
 import { IIssueFormService, IssueReporterData } from '../common/issue.js';
 import BaseHtml from './issueReporterPage.js';
-import { IssueWebReporter } from './issueReporterService.js';
 import './media/issueReporter.css';
+import { IEditorService } from '../../../services/editor/common/editorService.js';
+import { IssueReporterEditorInput } from '../../issueReporter/browser/issueReporterEditorInput.js';
 
 export interface IssuePassData {
 	issueTitle: string;
@@ -49,7 +49,8 @@ export class IssueFormService implements IIssueFormService {
 		@IContextKeyService protected readonly contextKeyService: IContextKeyService,
 		@ILogService protected readonly logService: ILogService,
 		@IDialogService protected readonly dialogService: IDialogService,
-		@IHostService protected readonly hostService: IHostService
+		@IHostService protected readonly hostService: IHostService,
+		@IEditorService protected readonly editorService: IEditorService
 	) { }
 
 	async openReporter(data: IssueReporterData): Promise<void> {
@@ -57,12 +58,13 @@ export class IssueFormService implements IIssueFormService {
 			return;
 		}
 
-		await this.openAuxIssueReporter(data);
-
-		if (this.issueReporterWindow) {
-			const issueReporter = this.instantiationService.createInstance(IssueWebReporter, false, data, { type: this.type, arch: this.arch, release: this.release }, product, this.issueReporterWindow);
-			issueReporter.render();
-		}
+		await this.editorService.openEditor({
+			resource: IssueReporterEditorInput.RESOURCE,
+			options: {
+				pinned: true,
+				revealIfOpened: true
+			}
+		});
 	}
 
 	async openAuxIssueReporter(data: IssueReporterData, bounds?: IRectangle): Promise<void> {
@@ -173,7 +175,10 @@ export class IssueFormService implements IIssueFormService {
 	//#region used by issue reporter
 
 	async closeReporter(): Promise<void> {
-		this.issueReporterWindow?.close();
+		const existingEditor = this.editorService.findEditors(IssueReporterEditorInput.RESOURCE);
+		if (existingEditor.length > 0) {
+			await this.editorService.closeEditor(existingEditor[0]);
+		}
 	}
 
 	async reloadWithExtensionsDisabled(): Promise<void> {
@@ -230,12 +235,19 @@ export class IssueFormService implements IIssueFormService {
 	hasToReload(data: IssueReporterData): boolean {
 		if (data.extensionId && this.extensionIdentifierSet.has(data.extensionId)) {
 			this.currentData = data;
-			this.issueReporterWindow?.focus();
-			return true;
+
+			// Focus the existing issue reporter editor if it's already open
+			const existingEditor = this.editorService.findEditors(IssueReporterEditorInput.RESOURCE);
+			if (existingEditor.length > 0) {
+				this.editorService.openEditor(IssueReporterEditorInput.instance, existingEditor[0].groupId);
+				return true;
+			}
 		}
 
-		if (this.issueReporterWindow) {
-			this.issueReporterWindow.focus();
+		// Check if issue reporter is already open
+		const existingEditor = this.editorService.findEditors(IssueReporterEditorInput.RESOURCE);
+		if (existingEditor.length > 0) {
+			this.editorService.openEditor(IssueReporterEditorInput.instance, existingEditor[0].groupId);
 			return true;
 		}
 

@@ -14,6 +14,7 @@ import { INativeHostService } from '../../../../platform/native/common/native.js
 import product from '../../../../platform/product/common/product.js';
 import { IAuxiliaryWindowService } from '../../../services/auxiliaryWindow/browser/auxiliaryWindowService.js';
 import { IHostService } from '../../../services/host/browser/host.js';
+import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { IssueFormService } from '../browser/issueFormService.js';
 import { IIssueFormService, IssueReporterData } from '../common/issue.js';
 import { IssueReporter } from './issueReporterService.js';
@@ -29,9 +30,10 @@ export class NativeIssueFormService extends IssueFormService implements IIssueFo
 		@IMenuService menuService: IMenuService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IHostService hostService: IHostService,
+		@IEditorService editorService: IEditorService,
 		@INativeHostService private readonly nativeHostService: INativeHostService,
 		@INativeEnvironmentService private readonly environmentService: INativeEnvironmentService,) {
-		super(instantiationService, auxiliaryWindowService, menuService, contextKeyService, logService, dialogService, hostService);
+		super(instantiationService, auxiliaryWindowService, menuService, contextKeyService, logService, dialogService, hostService, editorService);
 	}
 
 	// override to grab platform info

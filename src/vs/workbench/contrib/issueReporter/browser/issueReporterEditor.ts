@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import './media/issueReporter.css';
 import { $, Dimension, IDomPosition } from '../../../../base/browser/dom.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { escape } from '../../../../base/common/strings.js';
@@ -16,7 +17,6 @@ import { IEditorGroup } from '../../../services/editor/common/editorGroupsServic
 import { IssueReporterModel } from './issueReporterModel.js';
 
 export const ISSUE_REPORTER_EDITOR_ID = 'workbench.editor.issueReporter';
-export const ISSUE_REPORTER_INPUT_ID = 'workbench.input.issueReporter';
 
 
 export class IssueReporterEditor extends EditorPane {
@@ -33,12 +33,17 @@ export class IssueReporterEditor extends EditorPane {
 		@IInstantiationService protected readonly instantiationService: IInstantiationService
 	) {
 		super(IssueReporterEditor.ID, group, telemetryService, themeService, storageService);
-
 	}
 
 	protected override createEditor(parent: HTMLElement): void {
-		this.issueReporterControl = this.instantiationService.createInstance(IssueReporterControl, parent);
+		parent.classList.add('issue-reporter-body', 'monaco-workbench');
+		this.issueReporterControl = this._register(this.instantiationService.createInstance(IssueReporterControl, parent));
 	}
+
+	override focus(): void {
+		this.issueReporterControl?.focus();
+	}
+
 	override layout(dimension: Dimension, position?: IDomPosition): void {
 		this.issueReporterControl?.layout(dimension, position);
 	}
@@ -48,11 +53,25 @@ export class IssueReporterControl extends Disposable {
 
 	private dimensions: Dimension | undefined = undefined;
 	private readonly model: IssueReporterModel;
+	private container: HTMLElement;
 
 	constructor(parent: HTMLElement) {
 		super();
+		this.container = parent;
 		this.model = new IssueReporterModel();
 		this.create(parent);
+	}
+
+	// setData(data: any): void {
+	// 	this.model.update(data);
+	// }
+
+	focus(): void {
+		// Focus on the first input element if available
+		const firstInput = this.container.querySelector('.issue-reporter input, .issue-reporter select, .issue-reporter textarea') as HTMLElement;
+		if (firstInput) {
+			firstInput.focus();
+		}
 	}
 
 	layout(dimension: Dimension, position?: IDomPosition): void {
