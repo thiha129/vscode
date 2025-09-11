@@ -14,7 +14,7 @@ import { IssueReporterData } from './issueReporterModel.js';
 
 const issueReporterEditorIcon = registerIcon('issue-reporter-editor-label-icon', Codicon.report, localize('issueReporterEditorLabelIcon', 'Icon of the issue reporter editor label.'));
 
-export const ISSUE_REPORTER_INPUT_ID = 'workbench.input.issueReporter';
+export const ISSUE_REPORTER_INPUT_ID = 'workbench.editor.issueReporter';
 
 export class IssueReporterEditorInput extends EditorInput {
 	static readonly ID: string = ISSUE_REPORTER_INPUT_ID;

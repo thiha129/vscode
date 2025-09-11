@@ -13,10 +13,7 @@ import { IEditorResolverService, RegisteredEditorPriority } from '../../../servi
 import { IssueReporterEditorInput } from './issueReporterEditorInput.js';
 import { Action2, MenuId, MenuRegistry, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { Categories } from '../../../../platform/action/common/actionCommonCategories.js';
-import { SyncDescriptor } from '../../../../platform/instantiation/common/descriptors.js';
-import { EditorPaneDescriptor, IEditorPaneRegistry } from '../../../browser/editor.js';
-import { IssueReporterEditor } from './issueReporterEditor.js';
-import { IIssueFormService } from '../../issue/common/issue.js';
+import { IEditorService } from '../../../services/editor/common/editorService.js';
 
 //#region --- issue reporter editor
 
@@ -72,12 +69,6 @@ class IssueReporterEditorInputSerializer implements IEditorSerializer {
 
 Registry.as<IEditorFactoryRegistry>(EditorExtensions.EditorFactory).registerEditorSerializer(IssueReporterEditorInput.ID, IssueReporterEditorInputSerializer);
 
-// Register the editor pane
-Registry.as<IEditorPaneRegistry>(EditorExtensions.EditorPane).registerEditorPane(
-	EditorPaneDescriptor.create(IssueReporterEditor, IssueReporterEditor.ID, localize('issueReporter', "Issue Reporter")),
-	[new SyncDescriptor(IssueReporterEditorInput)]
-);
-
 //#endregion
 
 //#region --- issue reporter commands
@@ -89,23 +80,21 @@ class OpenIssueReporter extends Action2 {
 	constructor() {
 		super({
 			id: OpenIssueReporter.ID,
-			title: localize2('openIssueReporter', 'Open Issue Reporter'),
+			title: localize2('openIssueReporter', 'Open Issue Reporter WOOHOO'),
 			category: Categories.Help,
 			f1: true
 		});
 	}
 
 	override async run(accessor: ServicesAccessor): Promise<void> {
-		const issueFormService = accessor.get(IIssueFormService);
+		const editorService = accessor.get(IEditorService);
 
-		// Open issue reporter with minimal data - the service will handle the rest
-		await issueFormService.openReporter({
-			styles: { backgroundColor: '', color: '' },
-			zoomLevel: 1,
-			enabledExtensions: [],
-			restrictedMode: false,
-			isUnsupported: false,
-			githubAccessToken: ''
+		await editorService.openEditor({
+			resource: IssueReporterEditorInput.RESOURCE,
+			options: {
+				pinned: true,
+				revealIfOpened: true
+			}
 		});
 	}
 }

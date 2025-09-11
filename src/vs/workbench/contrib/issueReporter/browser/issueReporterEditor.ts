@@ -18,7 +18,6 @@ import { IssueReporterModel } from './issueReporterModel.js';
 
 export const ISSUE_REPORTER_EDITOR_ID = 'workbench.editor.issueReporter';
 
-
 export class IssueReporterEditor extends EditorPane {
 
 	static readonly ID: string = ISSUE_REPORTER_EDITOR_ID;
@@ -36,7 +35,6 @@ export class IssueReporterEditor extends EditorPane {
 	}
 
 	protected override createEditor(parent: HTMLElement): void {
-		parent.classList.add('issue-reporter-body', 'monaco-workbench');
 		this.issueReporterControl = this._register(this.instantiationService.createInstance(IssueReporterControl, parent));
 	}
 
@@ -62,9 +60,6 @@ export class IssueReporterControl extends Disposable {
 		this.create(parent);
 	}
 
-	// setData(data: any): void {
-	// 	this.model.update(data);
-	// }
 
 	focus(): void {
 		// Focus on the first input element if available
@@ -93,6 +88,8 @@ export class IssueReporterControl extends Disposable {
 
 	private createIssueReporterPage(parent: HTMLElement): void {
 		parent.innerHTML = '';
+		parent.classList.add('issue-reporter-body', 'monaco-workbench');
+
 
 		// Localized strings (grouped for easier maintenance)
 		const strings = {
