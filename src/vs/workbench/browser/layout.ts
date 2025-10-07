@@ -23,6 +23,7 @@ import { IHostService } from '../services/host/browser/host.js';
 import { IBrowserWorkbenchEnvironmentService } from '../services/environment/browser/environmentService.js';
 import { IEditorService } from '../services/editor/common/editorService.js';
 import { EditorGroupLayout, GroupOrientation, GroupsOrder, IEditorGroupsService } from '../services/editor/common/editorGroupsService.js';
+import { IBrowserViewPartsService } from './parts/browserView/browserViewParts.js';
 import { SerializableGrid, ISerializableView, ISerializedGrid, Orientation, ISerializedNode, ISerializedLeafNode, Direction, IViewSize, Sizing } from '../../base/browser/ui/grid/grid.js';
 import { Part } from './part.js';
 import { IStatusbarService } from '../services/statusbar/browser/statusbar.js';
@@ -279,7 +280,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 	private hostService!: IHostService;
 	private editorService!: IEditorService;
 	private mainPartEditorService!: IEditorService;
-	private editorGroupService!: IEditorGroupsService;
+	private browserViewPartsService!: IBrowserViewPartsService;
 	private paneCompositeService!: IPaneCompositePartService;
 	private titleService!: ITitleService;
 	private viewDescriptorService!: IViewDescriptorService;
@@ -319,8 +320,8 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 
 		// Parts
 		this.editorService = accessor.get(IEditorService);
-		this.editorGroupService = accessor.get(IEditorGroupsService);
-		this.mainPartEditorService = this.editorService.createScoped(this.editorGroupService.mainPart, this._store);
+		this.browserViewPartsService = accessor.get(IBrowserViewPartsService);
+		this.mainPartEditorService = this.editorService.createScoped(this.browserViewPartsService.mainPart, this._store);
 		this.paneCompositeService = accessor.get(IPaneCompositePartService);
 		this.viewDescriptorService = accessor.get(IViewDescriptorService);
 		this.titleService = accessor.get(ITitleService);
@@ -350,11 +351,11 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 
 		// Wait to register these listeners after the editor group service
 		// is ready to avoid conflicts on startup
-		this.editorGroupService.whenRestored.then(() => {
+		this.browserViewPartsService.mainPart.whenReady.then(() => {
 
-			// Restore main editor part on any editor change in main part
+			// Restore main browser view part on any view change in main part
 			this._register(this.mainPartEditorService.onDidVisibleEditorsChange(showEditorIfHidden));
-			this._register(this.editorGroupService.mainPart.onDidActivateGroup(showEditorIfHidden));
+			this._register(this.browserViewPartsService.mainPart.onDidChangeActiveView(showEditorIfHidden));
 
 			// Revalidate center layout when active editor changes: diff editor quits centered mode.
 			this._register(this.mainPartEditorService.onDidActiveEditorChange(() => this.centerMainEditorLayout(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED))));
@@ -403,10 +404,10 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 		// Fullscreen changes
 		this._register(onDidChangeFullscreen(windowId => this.onFullscreenChanged(windowId)));
 
-		// Group changes
-		this._register(this.editorGroupService.mainPart.onDidAddGroup(() => this.centerMainEditorLayout(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED))));
-		this._register(this.editorGroupService.mainPart.onDidRemoveGroup(() => this.centerMainEditorLayout(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED))));
-		this._register(this.editorGroupService.mainPart.onDidChangeGroupMaximized(() => this.centerMainEditorLayout(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED))));
+		// View changes
+		this._register(this.browserViewPartsService.mainPart.onDidAddView(() => this.centerMainEditorLayout(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED))));
+		this._register(this.browserViewPartsService.mainPart.onDidRemoveView(() => this.centerMainEditorLayout(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED))));
+		this._register(this.browserViewPartsService.mainPart.onDidChangeActiveView(() => this.centerMainEditorLayout(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED))));
 
 		// Prevent workbench from scrolling #55456
 		this._register(addDisposableListener(this.mainContainer, EventType.SCROLL, () => this.mainContainer.scrollTop = 0));
@@ -548,7 +549,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 		this.updateMenubarVisibility(!!skipLayout);
 
 		// Centered Layout
-		this.editorGroupService.whenRestored.then(() => this.centerMainEditorLayout(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED), skipLayout));
+		this.browserViewPartsService.mainPart.whenReady.then(() => this.centerMainEditorLayout(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED), skipLayout));
 	}
 
 	private setSideBarPosition(position: Position): void {
@@ -834,8 +835,8 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 
 		// Empty workbench configured to open untitled file if empty
 		else if (this.contextService.getWorkbenchState() === WorkbenchState.EMPTY && this.configurationService.getValue('workbench.startupEditor') === 'newUntitledFile') {
-			if (this.editorGroupService.hasRestorableState) {
-				return []; // do not open any empty untitled file if we restored groups/editors from previous session
+			if (this.browserViewPartsService.mainPart.hasRestorableState) {
+				return []; // do not open any empty untitled file if we restored views from previous session
 			}
 
 			return [{
@@ -901,13 +902,14 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 		layoutReadyPromises.push((async () => {
 			mark('code/willRestoreEditors');
 
-			// first ensure the editor part is ready
-			await this.editorGroupService.whenReady;
-			mark('code/restoreEditors/editorGroupsReady');
+			// first ensure the browser view part is ready
+			await this.browserViewPartsService.mainPart.whenReady;
+			mark('code/restoreEditors/browserViewPartsReady');
 
-			// apply editor layout if any
+			// apply browser view layout if any
 			if (this.state.initialization.layout?.editors) {
-				this.editorGroupService.mainPart.applyLayout(this.state.initialization.layout.editors);
+				// Browser views don't have layout management like editor groups
+				// This could be extended in the future if needed
 			}
 
 			// then see for editors to open as instructed
@@ -929,24 +931,31 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 				// by the input. this is important to ensure that we open
 				// the editors in the groups they belong to.
 
-				const editorGroupsInVisualOrder = this.editorGroupService.mainPart.getGroups(GroupsOrder.GRID_APPEARANCE);
-				const mapEditorsToGroup = new Map<GroupIdentifier, Set<IUntypedEditorInput>>();
+				const browserViews = this.browserViewPartsService.views;
+				const mapEditorsToView = new Map<string, Set<IUntypedEditorInput>>();
 
 				for (const editor of editors) {
-					const group = editorGroupsInVisualOrder[(editor.viewColumn ?? 1) - 1]; // viewColumn is index+1 based
+					const view = browserViews[(editor.viewColumn ?? 1) - 1]; // viewColumn is index+1 based
 
-					let editorsByGroup = mapEditorsToGroup.get(group.id);
-					if (!editorsByGroup) {
-						editorsByGroup = new Set<IUntypedEditorInput>();
-						mapEditorsToGroup.set(group.id, editorsByGroup);
+					let editorsByView = mapEditorsToView.get(view?.id || 'default');
+					if (!editorsByView) {
+						editorsByView = new Set<IUntypedEditorInput>();
+						mapEditorsToView.set(view?.id || 'default', editorsByView);
 					}
 
-					editorsByGroup.add(editor.editor);
+					editorsByView.add(editor.editor);
 				}
 
-				openEditorsPromise = Promise.all(Array.from(mapEditorsToGroup).map(async ([groupId, editors]) => {
+				openEditorsPromise = Promise.all(Array.from(mapEditorsToView).map(async ([viewId, editors]) => {
 					try {
-						await this.editorService.openEditors(Array.from(editors), groupId, { validateTrust: true });
+						const view = browserViews.find(v => v.id === viewId);
+						if (view && editors.size > 0) {
+							// For browser views, we'll just load the first editor's URL
+							const firstEditor = editors.values().next().value;
+							if (firstEditor && firstEditor.resource) {
+								await view.loadUrl(firstEditor.resource.toString());
+							}
+						}
 					} catch (error) {
 						this.logService.error(error);
 					}
@@ -958,7 +967,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 			layoutRestoredPromises.push(
 				Promise.all([
 					openEditorsPromise?.finally(() => mark('code/restoreEditors/editorsOpened')),
-					this.editorGroupService.whenRestored.finally(() => mark('code/restoreEditors/editorGroupsRestored'))
+					this.browserViewPartsService.mainPart.whenReady.finally(() => mark('code/restoreEditors/browserViewPartsReady'))
 				]).finally(() => {
 					// the `code/didRestoreEditors` perf mark is specifically
 					// for when visible editors have resolved, so we only mark
@@ -1190,7 +1199,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 
 		switch (part) {
 			case Parts.EDITOR_PART:
-				this.editorGroupService.getPart(container).activeGroup.focus();
+				this.browserViewPartsService.mainPart.activeView?.element.focus();
 				break;
 			case Parts.PANEL_PART: {
 				this.paneCompositeService.getActivePaneComposite(ViewContainerLocation.Panel)?.focus();
@@ -1230,7 +1239,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 		// Only some parts are supported for auxiliary windows
 		let partCandidate: unknown;
 		if (part === Parts.EDITOR_PART) {
-			partCandidate = this.editorGroupService.getPart(this.getContainerFromDocument(targetWindow.document));
+			partCandidate = this.browserViewPartsService.mainPart;
 		} else if (part === Parts.STATUSBAR_PART) {
 			partCandidate = this.statusBarService.getPart(this.getContainerFromDocument(targetWindow.document));
 		} else if (part === Parts.TITLEBAR_PART) {
@@ -1397,9 +1406,8 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 				this.state.runtime.zenMode.transitionDisposables.set(ZenModeSettings.HIDE_LINENUMBERS, this.mainPartEditorService.onDidVisibleEditorsChange(() => setLineNumbers('off')));
 			}
 
-			if (config.showTabs !== this.editorGroupService.partOptions.showTabs) {
-				this.state.runtime.zenMode.transitionDisposables.set(ZenModeSettings.SHOW_TABS, this.editorGroupService.mainPart.enforcePartOptions({ showTabs: config.showTabs }));
-			}
+			// Browser views don't have tabs like editor groups
+			// This could be extended in the future if needed
 
 			if (config.silentNotifications && zenModeExitInfo.handleNotificationsDoNotDisturbMode) {
 				this.notificationService.setFilter(NotificationsFilter.ERROR);
@@ -1434,7 +1442,8 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 				// Show Tabs
 				if (e.affectsConfiguration(ZenModeSettings.SHOW_TABS)) {
 					const zenModeShowTabs = this.configurationService.getValue<EditorTabsMode | undefined>(ZenModeSettings.SHOW_TABS) ?? 'multiple';
-					this.state.runtime.zenMode.transitionDisposables.set(ZenModeSettings.SHOW_TABS, this.editorGroupService.mainPart.enforcePartOptions({ showTabs: zenModeShowTabs }));
+					// Browser views don't have tabs like editor groups
+					// This could be extended in the future if needed
 				}
 
 				// Notifications
@@ -1654,41 +1663,21 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 	centerMainEditorLayout(active: boolean, skipLayout?: boolean): void {
 		this.stateModel.setRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED, active);
 
-		const mainVisibleEditors = coalesce(this.editorGroupService.mainPart.groups.map(group => group.activeEditor));
-		const isEditorComplex = mainVisibleEditors.some(editor => {
-			if (editor instanceof DiffEditorInput) {
-				return this.configurationService.getValue('diffEditor.renderSideBySide');
-			}
-
-			if (editor?.hasCapability(EditorInputCapabilities.MultipleEditors)) {
-				return true;
-			}
-
-			return false;
-		});
-
-		const layout = this.editorGroupService.getLayout();
-		let hasMoreThanOneColumn = false;
-		if (layout.orientation === GroupOrientation.HORIZONTAL) {
-			hasMoreThanOneColumn = layout.groups.length > 1;
-		} else {
-			hasMoreThanOneColumn = layout.groups.some(group => group.groups && group.groups.length > 1);
-		}
+		const mainVisibleViews = this.browserViewPartsService.views;
+		const isViewComplex = mainVisibleViews.length > 1; // Consider complex if more than one view
 
 		const isCenteredLayoutAutoResizing = this.configurationService.getValue('workbench.editor.centeredLayoutAutoResize');
 		if (
 			isCenteredLayoutAutoResizing &&
-			((hasMoreThanOneColumn && !this.editorGroupService.mainPart.hasMaximizedGroup()) || isEditorComplex)
+			isViewComplex
 		) {
-			active = false; // disable centered layout for complex editors or when there is more than one group
+			active = false; // disable centered layout for complex views
 		}
 
-		if (this.editorGroupService.mainPart.isLayoutCentered() !== active) {
-			this.editorGroupService.mainPart.centerLayout(active);
-
-			if (!skipLayout) {
-				this.layout();
-			}
+		// Browser views don't have centered layout functionality like editor groups
+		// This could be extended in the future if needed
+		if (!skipLayout) {
+			this.layout();
 		}
 
 		this._onDidChangeMainEditorCenteredLayout.fire(this.stateModel.getRuntimeValue(LayoutStateKeys.MAIN_EDITOR_CENTERED));
@@ -1736,29 +1725,11 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 			case Parts.EDITOR_PART:
 				viewSize = this.workbenchGrid.getViewSize(this.editorPartView);
 
-				// Single Editor Group
-				if (this.editorGroupService.mainPart.count === 1) {
-					this.workbenchGrid.resizeView(this.editorPartView, {
-						width: viewSize.width + sizeChangePxWidth,
-						height: viewSize.height + sizeChangePxHeight
-					});
-				} else {
-					const activeGroup = this.editorGroupService.mainPart.activeGroup;
-
-					const { width, height } = this.editorGroupService.mainPart.getSize(activeGroup);
-					this.editorGroupService.mainPart.setSize(activeGroup, { width: width + sizeChangePxWidth, height: height + sizeChangePxHeight });
-
-					// After resizing the editor group
-					// if it does not change in either direction
-					// try resizing the full editor part
-					const { width: newWidth, height: newHeight } = this.editorGroupService.mainPart.getSize(activeGroup);
-					if ((sizeChangePxHeight && height === newHeight) || (sizeChangePxWidth && width === newWidth)) {
-						this.workbenchGrid.resizeView(this.editorPartView, {
-							width: viewSize.width + (sizeChangePxWidth && width === newWidth ? sizeChangePxWidth : 0),
-							height: viewSize.height + (sizeChangePxHeight && height === newHeight ? sizeChangePxHeight : 0)
-						});
-					}
-				}
+				// Resize the browser view part
+				this.workbenchGrid.resizeView(this.editorPartView, {
+					width: viewSize.width + sizeChangePxWidth,
+					height: viewSize.height + sizeChangePxHeight
+				});
 
 				break;
 			default:
@@ -2018,7 +1989,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 		}
 
 		if (focusEditor) {
-			this.editorGroupService.mainPart.activeGroup.focus(); // Pass focus to editor group if panel part is now hidden
+			this.browserViewPartsService.mainPart.activeView?.element.focus(); // Pass focus to browser view if panel part is now hidden
 		}
 	}
 

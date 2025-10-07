@@ -1,0 +1,47 @@
+{
+  "name": "ai-webview-app",
+  "displayName": "AI Webview App",
+  "description": "AI-powered webview application with embedded browser and chat functionality",
+  "version": "0.0.1",
+  "publisher": "vscode",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:ai-webview-app.open"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ai-webview-app.open",
+        "title": "Open AI Webview App",
+        "category": "AI"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "ai-webview-app.open",
+          "when": "true"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}

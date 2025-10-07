@@ -837,4 +837,4 @@ export class EditorParts extends MultiWindowParts<EditorPart> implements IEditor
 	//#endregion
 }
 
-registerSingleton(IEditorGroupsService, EditorParts, InstantiationType.Eager);
+// registerSingleton(IEditorGroupsService, EditorParts, InstantiationType.Eager);
