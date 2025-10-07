@@ -138,3 +138,4 @@ Sau khi implement, VSCode sẽ hoạt động như một **browser-based applica
 - Main editor area hiển thị web content
 - Navigation controls như trình duyệt
 - Tất cả VSCode features khác vẫn hoạt động bình thường
+

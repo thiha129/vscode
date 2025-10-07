@@ -16,6 +16,7 @@ import { IHostService } from '../../../services/host/browser/host.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { ServiceCollection } from '../../../../platform/instantiation/common/serviceCollection.js';
 import { mainWindow } from '../../../../base/browser/window.js';
+import { IEditorGroupView } from '../editor/editor.js';
 
 export interface IBrowserView {
 	readonly id: string;

@@ -9,6 +9,7 @@ import { Emitter } from '../../../../base/common/event.js';
 import { DisposableMap, DisposableStore, IDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
 import { GroupIdentifier, IEditorPartOptions } from '../../../common/editor.js';
 import { EditorPart, IEditorPartUIState, MainEditorPart } from './editorPart.js';
+import { BrowserViewCompatibilityPart } from '../browserView/browserViewCompatibilityPart.js';
 import { IEditorGroupView, IEditorPartsView } from './editor.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
@@ -51,9 +52,9 @@ export class EditorParts extends MultiWindowParts<EditorPart, IEditorPartsMement
 
 	declare readonly _serviceBrand: undefined;
 
-	readonly mainPart: MainEditorPart;
+	readonly mainPart: BrowserViewCompatibilityPart;
 
-	private mostRecentActiveParts: MainEditorPart[];
+	private mostRecentActiveParts: BrowserViewCompatibilityPart[];
 
 	constructor(
 		@IInstantiationService protected readonly instantiationService: IInstantiationService,
@@ -87,8 +88,8 @@ export class EditorParts extends MultiWindowParts<EditorPart, IEditorPartsMement
 		this.whenReady.then(() => this.registerGroupsContextKeyListeners());
 	}
 
-	protected createMainEditorPart(): MainEditorPart {
-		return this.instantiationService.createInstance(MainEditorPart, this);
+	protected createMainEditorPart(): BrowserViewCompatibilityPart {
+		return this.instantiationService.createInstance(BrowserViewCompatibilityPart);
 	}
 
 	//#region Scoped Instantiation Services

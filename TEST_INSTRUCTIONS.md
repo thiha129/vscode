@@ -173,3 +173,4 @@ Screenshots: [Attach if needed]
 - ❌ Main editor area vẫn hiển thị editor cũ
 - ❌ Browser view không hoạt động
 - ❌ Các VSCode features khác bị lỗi
+
