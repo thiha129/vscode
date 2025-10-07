@@ -27,7 +27,7 @@ export function upgradeToISocket(req: http.IncomingMessage, socket: Socket, {
 	skipWebSocketFrames?: boolean;
 	disableWebSocketCompression?: boolean;
 }): NodeSocket | WebSocketNodeSocket | undefined {
-	if (req.headers['upgrade'] === undefined || req.headers['upgrade'].toLowerCase() !== 'websocket') {
+	if (req.headers.upgrade === undefined || req.headers.upgrade.toLowerCase() !== 'websocket') {
 		socket.end('HTTP/1.1 400 Bad Request');
 		return;
 	}
@@ -727,6 +727,7 @@ class ZlibInflateStream extends Disposable {
 		super();
 		this._zlibInflate = createInflateRaw(options);
 		this._zlibInflate.on('error', (err) => {
+			// eslint-disable-next-line local/code-no-any-casts
 			this._tracer.traceSocketEvent(SocketDiagnosticsEventType.zlibInflateError, { message: err?.message, code: (<any>err)?.code });
 			this._onError.fire(err);
 		});
@@ -780,6 +781,7 @@ class ZlibDeflateStream extends Disposable {
 			windowBits: 15
 		});
 		this._zlibDeflate.on('error', (err) => {
+			// eslint-disable-next-line local/code-no-any-casts
 			this._tracer.traceSocketEvent(SocketDiagnosticsEventType.zlibDeflateError, { message: err?.message, code: (<any>err)?.code });
 			this._onError.fire(err);
 		});
